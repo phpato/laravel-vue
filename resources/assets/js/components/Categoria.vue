@@ -47,9 +47,19 @@
                                             class="btn btn-warning btn-sm">
                                             <i class="icon-pencil"></i>
                                         </button> &nbsp;
-                                        <button type="button" class="btn btn-danger btn-sm">
-                                            <i class="icon-trash"></i>
-                                        </button>
+
+                                        <template v-if="categoria.condicion == 1">
+                                            <button @click="desactivarCategoria( categoria.id)" type="button"
+                                                class="btn btn-danger btn-sm">
+                                                <i class="icon-trash"></i>
+                                            </button>
+                                        </template>
+                                        <template v-if="categoria.condicion == 0">
+                                            <button @click="activarCategoria( categoria.id)" type="button"
+                                                class="btn btn-info btn-sm">
+                                                <i class="icon-check"></i>
+                                            </button>
+                                        </template>
                                     </td>
                                     <td v-text="categoria.nombre"></td>
                                     <td v-text="categoria.descripcion"></td>
@@ -108,12 +118,12 @@
                         <form method="post">
                             <div v-if="errors.length" class="form-group">
                                 <div class="alert alert-danger">
-                                <p>
-                                    <b>Por favor corriga el(los) siguiente(s) error(es):</b>
-                                    <ul>
-                                        <li :key="error" v-for="error in errors">{{ error }}</li>
-                                    </ul>
-                                </p>
+                                    <p>
+                                        <b>Por favor corriga el(los) siguiente(s) error(es):</b>
+                                        <ul>
+                                            <li :key="error" v-for="error in errors">{{ error }}</li>
+                                        </ul>
+                                    </p>
                                 </div>
                             </div>
                             <div class="form-group row">
@@ -136,7 +146,15 @@
                     <div class="modal-footer">
                         <button type="button" @click="cerrarModal()" class="btn btn-secondary"
                             data-dismiss="modal">Cerrar</button>
-                        <button type="submit" @click="registrarCategoria($event)" class="btn btn-primary">Guardar</button>
+
+                        <div v-if="tipoAccion == 1">
+                            <button type="submit" @click="registrarCategoria($event)"
+                                class="btn btn-primary">Guardar</button>
+                        </div>
+                        <div v-else>
+                            <button type="submit" @click="actualizarCategoria($event)"
+                                class="btn btn-primary">Actualizar</button>
+                        </div>
                     </div>
                 </div>
                 <!-- /.modal-content -->
@@ -144,30 +162,7 @@
             <!-- /.modal-dialog -->
         </div>
         <!--Fin del modal-->
-        <!-- Inicio del modal Eliminar -->
-        <div class="modal fade" id="modalEliminar" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
-            style="display: none;" aria-hidden="true">
-            <div class="modal-dialog modal-danger" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h4 class="modal-title">Eliminar Categoría</h4>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">×</span>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <p>Estas seguro de eliminar la categoría?</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
-                        <button type="button" class="btn btn-danger">Eliminar</button>
-                    </div>
-                </div>
-                <!-- /.modal-content -->
-            </div>
-            <!-- /.modal-dialog -->
-        </div>
-        <!-- Fin del modal Eliminar -->
+
     </main>
 </template>
 
@@ -179,17 +174,20 @@
 
         data() {
             return {
+                categoria_id: '',
                 nombre: '',
                 descripcion: '',
                 categorias: [],
                 modal: 0,
                 tituloModal: '',
                 tipoAccion: '',
-                errors: ''
+                errors: '',
+                erroCategoria: '',
+                mensajeCategorias: []
             }
         },
         methods: {
-            checkForm: function (e) {
+            ValidarFormulario(e) {
                 if (this.nombre && this.descripcion) {
                     return true;
                 }
@@ -208,15 +206,12 @@
             listarCategoria() {
                 axios.get('/categoria').then((response) => {
                         //console.log("la response es: ",response.data);
-                        this.categorias = response.data;
+                        this.categorias = response.data.data;
                     })
                     .catch(function (error) {
                         // handle error
                         console.log("ocurrio un error: ", error);
                     });
-            },
-            validaCampos() {
-
             },
             cerrarModal() {
                 this.errors = [];
@@ -229,7 +224,7 @@
             registrarCategoria($event) {
 
 
-                let formularioValido = this.checkForm($event);
+                let formularioValido = this.ValidarFormulario($event);
                 if (formularioValido) {
                     let me = this;
                     axios.post('/categoria', {
@@ -243,7 +238,7 @@
                                 title: 'Categoria registrada exitosamente!',
                                 showConfirmButton: false,
                                 timer: 1500
-                            }).then(()=> {
+                            }).then(() => {
                                 me.cerrarModal();
                                 me.listarCategoria();
                             })
@@ -252,10 +247,112 @@
                         .catch(function (error) {
                             console.log(error);
                         });
-                }else{
-                    alert("go fuckyourself men");
+                } else {
+                    Swal.fire({
+                        position: 'center',
+                        type: 'error',
+                        title: 'Se registraron errores al momento de actualizar',
+                        showConfirmButton: false,
+                        timer: 1500
+                    })
                 }
 
+            },
+            actualizarCategoria($event) {
+
+
+                let formularioValido = this.ValidarFormulario($event);
+                if (formularioValido) {
+                    let me = this;
+                    axios.put(`/categoria/${me.categoria_id}`, {
+                            categoria_id: me.categoria_id,
+                            nombre: this.nombre.toLowerCase(),
+                            descripcion: this.descripcion.toLowerCase()
+                        })
+                        .then(function (response) {
+                            Swal.fire({
+                                position: 'center',
+                                type: 'success',
+                                title: 'Categoria registrada exitosamente!',
+                                showConfirmButton: false,
+                                timer: 1500
+                            }).then(() => {
+                                me.cerrarModal();
+                                me.listarCategoria();
+                            })
+
+                        })
+                        .catch(function (error) {
+                            console.log(error);
+                        });
+                }
+
+            },
+            desactivarCategoria(id) {
+
+                let me = this;
+                Swal.fire({
+                    title: '¿Está seguro de actiar la categoria?',
+                    type: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    cancelButtonText: "Cancelar",
+                    confirmButtonText: 'Eliminar'
+                }).then((result) => {
+                    if (result.value) {
+                        axios.put(`/categoria/desactivar/${id}`)
+                            .then(function (response) {
+                                Swal.fire({
+                                    position: 'center',
+                                    type: 'success',
+                                    title: 'Categoria desactivada exitosamente!',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                }).then(() => {
+                                    me.listarCategoria();
+                                })
+
+                            })
+                            .catch(function (error) {
+                                console.log(error);
+                            });
+
+                    }
+                })
+            },
+            activarCategoria(id) {
+
+                let me = this;
+                Swal.fire({
+                    title: '¿Está seguro de activar la categoria?',
+                    type: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    cancelButtonText: "Cancelar",
+                    confirmButtonText: 'Eliminar'
+                }).then((result) => {
+                    if (result.value) {
+                        axios.put(`/categoria/activar/${id}`)
+                            .then(function (response) {
+                                Swal.fire({
+                                    position: 'center',
+                                    type: 'success',
+                                    title: 'Categoria activada exitosamente!',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                }).then(() => {
+                                    me.listarCategoria();
+                                })
+
+                            })
+                            .catch(function (error) {
+                                console.log(error);
+                            });
+
+                    }
+                })
             },
             //funcion para abrir modal
             abrirModal(modelo, accion, data = []) {
@@ -270,11 +367,19 @@
                                 this.tituloModal = 'Registrar Categoría'
                                 this.nombre = '';
                                 this.descripcion = '';
-
+                                this.tipoAccion = 1;
                                 break;
                             }
 
                             case "actualizar": {
+
+                                this.modal = 1;
+                                this.tituloModal = 'Actualizar Categoría'
+                                this.nombre = data["nombre"];
+                                this.descripcion = data["descripcion"];
+                                this.categoria_id = data["id"]
+                                this.tipoAccion = 2;
+                                break;
 
                             }
                             case "eliminar": {
@@ -291,6 +396,7 @@
             this.listarCategoria()
         }
     }
+
 </script>
 <style>
     .modal-content {
@@ -305,4 +411,5 @@
         position: absolute !important;
         background-color: #3c29297a !important;
     }
+
 </style>

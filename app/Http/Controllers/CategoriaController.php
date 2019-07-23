@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Categoria;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CategoriaController extends Controller
 {
@@ -14,11 +15,20 @@ class CategoriaController extends Controller
      */
     public function index()
     {
-        $categorias = Categoria::all();
+   
+        $categorias = DB::table('categorias')->paginate(3);
         return response()->json([
-            "ok" => true,
+            "paginacion" => [
+                "current_page" => $categorias->currentPage(),
+                "per_page" => $categorias->perPage(),
+                "last_page" => $categorias->lastPage(),
+                "from" => $categorias->firstItem(),
+                "to" => $categorias->lastItem(),
+                "total" => $categorias->total(),
+            
+            ],
             "data" => $categorias
-        ]);
+        ],201);
     }
 
 
@@ -52,16 +62,7 @@ class CategoriaController extends Controller
         //
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function edit($id)
-    {
-        //
-    }
+
 
     /**
      * Update the specified resource in storage.
@@ -70,9 +71,19 @@ class CategoriaController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request)
     {
-        //
+        $categoria = Categoria::find($request->categoria_id);
+        $categoria->update([
+            "nombre" => $request->nombre,
+            "descripcion" => $request->descripcion
+        ]);
+
+        return response()->json([
+            "ok" => true,
+            "data" => $categoria,
+            "message" => "Categoria actualizada exitosamente"
+        ]);
     }
 
     /**
@@ -81,8 +92,41 @@ class CategoriaController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function desactivar($id)
     {
-        //
+        $categoria = Categoria::find($id);
+        if($categoria){
+            $categoria->condicion = 0;
+            $categoria->update();
+            return response()->json([
+                "ok" => true,
+                "data" => $categoria,
+                "message" => "Categoria actualizada exitosamente"
+            ],201);
+        }else{
+            return response()->json([
+                "ok" => false,
+                "message" => "Categoria no existe"
+            ],404);
+        }
+    }
+
+    public function activar($id)
+    {
+        $categoria = Categoria::find($id);
+        if($categoria){
+            $categoria->condicion = 1;
+            $categoria->update();
+            return response()->json([
+                "ok" => true,
+                "data" => $categoria,
+                "message" => "Categoria actualizada exitosamente"
+            ],201);
+        }else{
+            return response()->json([
+                "ok" => false,
+                "message" => "Categoria no existe"
+            ],404);
+        }
     }
 }
